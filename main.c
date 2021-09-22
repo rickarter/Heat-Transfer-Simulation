@@ -2,15 +2,9 @@
 
 #define WINDOW_CLASS_NAME "ThermalConductivity"
 
-LRESULT CALLBACK WindowProc(HWND hWnd,
-                         UINT message,
-                         WPARAM wParam,
-                         LPARAM lParam);
+LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-int WINAPI WinMain(HINSTANCE hInstance,
-                   HINSTANCE hPrevInstance,
-                   LPSTR lpCmdLine,
-                   int nShowCmd)
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
 	HWND hWnd;
 
@@ -27,6 +21,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
     wc.lpszClassName = TEXT(WINDOW_CLASS_NAME);
 
 	RegisterClassEx(&wc);
+	
+	RECT wr = {0, 0, 500, 500};
+	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
 	hWnd = CreateWindowEx(
 		0,
@@ -35,8 +32,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		WS_OVERLAPPEDWINDOW,
 		300,
 		300,
-		500,
-		500,
+		wr.right - wr.left,
+		wr.bottom - wr.top,
 		NULL,
 		NULL,
 		hInstance,
@@ -46,19 +43,28 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	ShowWindow(hWnd, SW_SHOW);
 
 	MSG msg;
-	while(GetMessage(&msg, NULL, 0, 0))
+	/*while(GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
+	}*/
+	BOOL run = TRUE;
+	while (run)
+	{
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+
+			if (msg.message == WM_QUIT)
+				run = FALSE;
+		}
 	}
 
 	return 0;
 }
 
-LRESULT CALLBACK WindowProc(HWND hWnd,
-                         UINT message,
-                         WPARAM wParam,
-                         LPARAM lParam)
+LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch(message)
 	{
