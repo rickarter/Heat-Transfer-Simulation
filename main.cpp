@@ -18,6 +18,7 @@ ID3D11DeviceContext *devcon;
 ID3D11RenderTargetView *backbuffer;
 ID3D11VertexShader *pVS;
 ID3D11PixelShader *pPS;
+ID3D11InputLayout *pLayout;
 
 ID3D11Buffer *pVertexBuffer;
 ID3D11Buffer *pIndexBuffer;
@@ -172,6 +173,7 @@ void CleanD3D()
 	// Close and release all existing COM objects
 	pVS->Release();
 	pPS->Release();
+	pLayout->Release();
 	pVertexBuffer->Release();
 	pIndexBuffer->Release();
 	swapchain->Release();
@@ -259,4 +261,13 @@ void InitPipeline()
 
 	devcon->VSSetShader(pVS, NULL, NULL);
 	devcon->PSSetShader(pPS, NULL, NULL);
+
+    D3D11_INPUT_ELEMENT_DESC ied[] =
+    {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    };
+
+    dev->CreateInputLayout(ied, 2, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &pLayout);
+    devcon->IASetInputLayout(pLayout);
 }
