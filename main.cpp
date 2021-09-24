@@ -20,6 +20,7 @@ ID3D11VertexShader *pVS;
 ID3D11PixelShader *pPS;
 
 ID3D11Buffer *pVertexBuffer;
+ID3D11Buffer *pIndexBuffer;
 
 struct Vertex
 {
@@ -172,6 +173,7 @@ void CleanD3D()
 	pVS->Release();
 	pPS->Release();
 	pVertexBuffer->Release();
+	pIndexBuffer->Release();
 	swapchain->Release();
 	backbuffer->Release();
 	dev->Release();
@@ -184,24 +186,33 @@ void RenderFrame()
 	float clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	devcon->ClearRenderTargetView(backbuffer, clearColor);
 
-	devcon->Draw(3, 0);
+	//devcon->Draw(4, 0);
+	devcon->DrawIndexed(6, 0, 0);
 
 	swapchain->Present(0, 0);
 }
 
 void InitGraphics()
 {
-	Vertex vertices[] = 
+	// Vertex buffer
+//	Vertex vertices[] = 
+//	{
+//		XMFLOAT4(0.0f, 0.5f, 0.0f, 1.0f),
+//		XMFLOAT4(0.5f, -0.5f, 0.0f, 1.0f),
+//		XMFLOAT4(-0.5f, -0.5f, 0.0f, 1.0f),
+//	};
+	Vertex vertices [] = 
 	{
-		XMFLOAT4(0.0f, 0.5f, 0.0f, 1.0f),
-		XMFLOAT4(0.5f, -0.5f, 0.0f, 1.0f),
-		XMFLOAT4(-0.5f, -0.5f, 0.0f, 1.0f),
+		XMFLOAT4(-1.0f, -1.0f, 0.0f, 1.0f),
+		XMFLOAT4(-1.0f, 1.0f, 0.0f, 1.0f),
+		XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f),
+		XMFLOAT4(1.0f, -1.0f, 0.0f, 1.0f)
 	};
 
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory(&bd, sizeof(bd));
 
-	bd.ByteWidth = sizeof(Vertex) * 3;
+	bd.ByteWidth = sizeof(Vertex) * 4;
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
@@ -216,15 +227,32 @@ void InitGraphics()
 	UINT offset = 0;
 	devcon->IASetVertexBuffers(0, 1, &pVertexBuffer, &stride, &offset);
 
+	// Index buffer
+	unsigned int indices[] = { 0, 1, 2, 3, 0, 2 };
+
+	ZeroMemory(&bd, sizeof(bd)); // Clean bd (Decleared above)
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(unsigned int) * 6;
+	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	bd.CPUAccessFlags = 0;
+
+	ZeroMemory(&InitData, sizeof(InitData)); // Clean InitData (Decleared above)
+	InitData.pSysMem = indices;
+	InitData.SysMemPitch = 0;
+	InitData.SysMemSlicePitch = 0;
+	dev->CreateBuffer(&bd, &InitData, &pIndexBuffer);
+
+	devcon->IASetIndexBuffer(pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
 	devcon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 void InitPipeline()
 {
 	ID3DBlob *vsBlob;
-	D3DCompileFromFile(L"shaders.hlsl", NULL, NULL, "VS", "vs_5_0", 0, 0, &vsBlob, NULL);
+	D3DCompileFromFile(L"shaders.hlsl", NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VS", "vs_5_0", 0, 0, &vsBlob, NULL);
 	ID3DBlob *psBlob;
-	D3DCompileFromFile(L"shaders.hlsl", NULL, NULL, "PS", "ps_5_0", 0, 0, &psBlob, NULL);
+	D3DCompileFromFile(L"shaders.hlsl", NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PS", "ps_5_0", 0, 0, &psBlob, NULL);
 
 	dev->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), NULL, &pVS);
 	dev->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), NULL, &pPS);
