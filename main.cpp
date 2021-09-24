@@ -1,7 +1,12 @@
 #include <windows.h>
 #include <d3d11.h>
+#include <D3Dcompiler.h>
+#include <directxmath.h>
+
+using namespace DirectX;
 
 #pragma comment (lib, "d3d11.lib")
+#pragma comment(lib,"D3Dcompiler.lib")
 
 #define WINDOW_CLASS_NAME "ThermalConductivity"
 #define SCREEN_WIDTH 800
@@ -11,10 +16,21 @@ IDXGISwapChain *swapchain;
 ID3D11Device *dev;
 ID3D11DeviceContext *devcon;
 ID3D11RenderTargetView *backbuffer;
+ID3D11VertexShader *pVS;
+ID3D11PixelShader *pPS;
+
+ID3D11Buffer *pVertexBuffer;
+
+struct Vertex
+{
+	XMFLOAT4 position;
+};
 
 void InitD3D(HWND hWnd);
 void CleanD3D(void);
 void RenderFrame(void);
+void InitPipeline(void);
+void InitGraphics(void);
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -143,6 +159,9 @@ void InitD3D(HWND hWnd)
 	viewport.Height = SCRENN_HEIGHT;
 
 	devcon->RSSetViewports(1, &viewport);
+
+	InitPipeline();
+	InitGraphics();
 }
 
 void CleanD3D()
@@ -150,7 +169,11 @@ void CleanD3D()
 	swapchain->SetFullscreenState(FALSE, NULL);
 
 	// Close and release all existing COM objects
+	pVS->Release();
+	pPS->Release();
+	pVertexBuffer->Release();
 	swapchain->Release();
+	backbuffer->Release();
 	dev->Release();
 	devcon->Release();
 }
@@ -161,6 +184,51 @@ void RenderFrame()
 	float clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	devcon->ClearRenderTargetView(backbuffer, clearColor);
 
+	devcon->Draw(3, 0);
 
 	swapchain->Present(0, 0);
+}
+
+void InitGraphics()
+{
+	Vertex vertices[] = 
+	{
+		XMFLOAT4(0.0f, 0.5f, 0.0f, 1.0f),
+		XMFLOAT4(0.5f, -0.5f, 0.0f, 1.0f),
+		XMFLOAT4(-0.5f, -0.5f, 0.0f, 1.0f),
+	};
+
+	D3D11_BUFFER_DESC bd;
+	ZeroMemory(&bd, sizeof(bd));
+
+	bd.ByteWidth = sizeof(Vertex) * 3;
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA InitData;
+	ZeroMemory(&InitData, sizeof(InitData));
+	
+	InitData.pSysMem = vertices;
+	dev->CreateBuffer(&bd, &InitData, &pVertexBuffer);
+
+	UINT stride = sizeof(Vertex);
+	UINT offset = 0;
+	devcon->IASetVertexBuffers(0, 1, &pVertexBuffer, &stride, &offset);
+
+	devcon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
+void InitPipeline()
+{
+	ID3DBlob *vsBlob;
+	D3DCompileFromFile(L"shaders.hlsl", NULL, NULL, "VS", "vs_5_0", 0, 0, &vsBlob, NULL);
+	ID3DBlob *psBlob;
+	D3DCompileFromFile(L"shaders.hlsl", NULL, NULL, "PS", "ps_5_0", 0, 0, &psBlob, NULL);
+
+	dev->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), NULL, &pVS);
+	dev->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), NULL, &pPS);
+
+	devcon->VSSetShader(pVS, NULL, NULL);
+	devcon->PSSetShader(pPS, NULL, NULL);
 }
