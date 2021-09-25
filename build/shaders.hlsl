@@ -20,5 +20,6 @@ VOut VS(VIn input)
 float4 PS(VOut input) : SV_Target
 {
     float4 pos = input.position;
-    return float4(pos.r/800, pos.g/800, 0 , 1);
+    pos.xy /= 800;
+    return pos;  
 }

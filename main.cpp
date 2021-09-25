@@ -1,7 +1,7 @@
 #include <windows.h>
 #include <d3d11.h>
 #include <D3Dcompiler.h>
-#include <directxmath.h>
+#include <DirectXmath.h>
 
 using namespace DirectX;
 
@@ -22,10 +22,16 @@ ID3D11InputLayout *pLayout;
 
 ID3D11Buffer *pVertexBuffer;
 ID3D11Buffer *pIndexBuffer;
+ID3D11Buffer *pComputeBuffer;
 
 struct Vertex
 {
 	XMFLOAT4 position;
+};
+
+struct ComputeData 
+{
+	XMFLOAT4 color;
 };
 
 void InitD3D(HWND hWnd);
@@ -60,7 +66,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		0,
 		TEXT(WINDOW_CLASS_NAME),
 		TEXT(WINDOW_CLASS_NAME),
-		WS_OVERLAPPEDWINDOW,
+		(WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU),
 		500,
 		100,
 		wr.right - wr.left,
@@ -176,6 +182,7 @@ void CleanD3D()
 	pLayout->Release();
 	pVertexBuffer->Release();
 	pIndexBuffer->Release();
+	pComputeBuffer->Release();
 	swapchain->Release();
 	backbuffer->Release();
 	dev->Release();
@@ -196,13 +203,6 @@ void RenderFrame()
 
 void InitGraphics()
 {
-	// Vertex buffer
-//	Vertex vertices[] = 
-//	{
-//		XMFLOAT4(0.0f, 0.5f, 0.0f, 1.0f),
-//		XMFLOAT4(0.5f, -0.5f, 0.0f, 1.0f),
-//		XMFLOAT4(-0.5f, -0.5f, 0.0f, 1.0f),
-//	};
 	Vertex vertices [] = 
 	{
 		XMFLOAT4(-1.0f, -1.0f, 0.0f, 1.0f),
@@ -246,6 +246,29 @@ void InitGraphics()
 
 	devcon->IASetIndexBuffer(pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
+	// Compute shader buffer
+	
+	ComputeData data[] = 
+	{
+		XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)
+	};
+
+	ZeroMemory(&bd, sizeof(bd)); // Clean bd (Decleared above)
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(ComputeData) * 1;
+	bd.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+	bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.CPUAccessFlags = 0;
+
+	ZeroMemory(&InitData, sizeof(InitData)); // Clean InitData (Decleared above)
+	InitData.pSysMem = data;
+	InitData.SysMemPitch = 0;
+	InitData.SysMemSlicePitch = 0;
+
+	HRESULT hr = dev->CreateBuffer(&bd, &InitData, &pComputeBuffer);
+	assert(SUCCEEDED(hr));
+
+	// Set topology
 	devcon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
