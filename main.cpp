@@ -250,15 +250,15 @@ void InitGraphics()
 	devcon->IASetIndexBuffer(pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
 	// Compute shader buffer
-	
 	ComputeData data[] = 
 	{
-		XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f)
+		XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),
+		XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)
 	};
 
 	ZeroMemory(&bd, sizeof(bd)); // Clean bd (Decleared above)
 	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(ComputeData) * 1;
+	bd.ByteWidth = sizeof(ComputeData) * 2;
 	bd.StructureByteStride = sizeof(ComputeData);
 	bd.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -276,7 +276,7 @@ void InitGraphics()
 
 	uavd.Buffer.FirstElement = 0;
 	uavd.Buffer.Flags = 0;
-	uavd.Buffer.NumElements = bd.ByteWidth / bd.StructureByteStride;
+	uavd.Buffer.NumElements = 2;
 	uavd.Format = DXGI_FORMAT_UNKNOWN;
 	uavd.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 
