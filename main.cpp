@@ -16,9 +16,11 @@ IDXGISwapChain *swapchain;
 ID3D11Device *dev;
 ID3D11DeviceContext *devcon;
 ID3D11RenderTargetView *backbuffer;
+ID3D11InputLayout *pLayout;
+ID3D11UnorderedAccessView *pUAView;
+
 ID3D11VertexShader *pVS;
 ID3D11PixelShader *pPS;
-ID3D11InputLayout *pLayout;
 
 ID3D11Buffer *pVertexBuffer;
 ID3D11Buffer *pIndexBuffer;
@@ -180,6 +182,7 @@ void CleanD3D()
 	pVS->Release();
 	pPS->Release();
 	pLayout->Release();
+	pUAView->Release();
 	pVertexBuffer->Release();
 	pIndexBuffer->Release();
 	pComputeBuffer->Release();
@@ -256,6 +259,7 @@ void InitGraphics()
 	ZeroMemory(&bd, sizeof(bd)); // Clean bd (Decleared above)
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(ComputeData) * 1;
+	bd.StructureByteStride = sizeof(ComputeData);
 	bd.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.CPUAccessFlags = 0;
@@ -265,8 +269,18 @@ void InitGraphics()
 	InitData.SysMemPitch = 0;
 	InitData.SysMemSlicePitch = 0;
 
-	HRESULT hr = dev->CreateBuffer(&bd, &InitData, &pComputeBuffer);
-	assert(SUCCEEDED(hr));
+	dev->CreateBuffer(&bd, &InitData, &pComputeBuffer);
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC uavd;
+	ZeroMemory(&uavd, sizeof(uavd));
+
+	uavd.Buffer.FirstElement = 0;
+	uavd.Buffer.Flags = 0;
+	uavd.Buffer.NumElements = bd.ByteWidth / bd.StructureByteStride;
+	uavd.Format = DXGI_FORMAT_UNKNOWN;
+	uavd.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+
+	dev->CreateUnorderedAccessView(pComputeBuffer, &uavd, &pUAView);
 
 	// Set topology
 	devcon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
