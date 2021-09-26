@@ -6,7 +6,7 @@
 using namespace DirectX;
 
 #pragma comment (lib, "d3d11.lib")
-#pragma comment(lib,"D3Dcompiler.lib")
+#pragma comment (lib, "D3Dcompiler.lib")
 
 #define WINDOW_CLASS_NAME "ThermalConductivity"
 #define SCREEN_WIDTH 800
@@ -21,6 +21,7 @@ ID3D11UnorderedAccessView *pUAView;
 
 ID3D11VertexShader *pVS;
 ID3D11PixelShader *pPS;
+ID3D11ComputeShader *pCS;
 
 ID3D11Buffer *pVertexBuffer;
 ID3D11Buffer *pIndexBuffer;
@@ -181,13 +182,18 @@ void CleanD3D()
 	// Close and release all existing COM objects
 	pVS->Release();
 	pPS->Release();
+	pCS->Release();
+
 	pLayout->Release();
 	pUAView->Release();
+
 	pVertexBuffer->Release();
 	pIndexBuffer->Release();
 	pComputeBuffer->Release();
+
 	swapchain->Release();
 	backbuffer->Release();
+
 	dev->Release();
 	devcon->Release();
 }
@@ -198,7 +204,8 @@ void RenderFrame()
 	float clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	devcon->ClearRenderTargetView(backbuffer, clearColor);
 
-	//devcon->Draw(4, 0);
+	devcon->Dispatch(1, 1, 1);
+
 	devcon->DrawIndexed(6, 0, 0);
 
 	swapchain->Present(0, 0);
@@ -282,22 +289,26 @@ void InitGraphics()
 
 	dev->CreateUnorderedAccessView(pComputeBuffer, &uavd, &pUAView);
 
+	devcon->CSSetUnorderedAccessViews(0, 1, &pUAView, NULL);
+
 	// Set topology
 	devcon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 void InitPipeline()
 {
-	ID3DBlob *vsBlob;
-	D3DCompileFromFile(L"shaders.hlsl", NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VS", "vs_5_0", 0, 0, &vsBlob, NULL);
-	ID3DBlob *psBlob;
+	ID3DBlob *vsBlob, *psBlob, *csBlob;
+	D3DCompileFromFile(L"shaders.hlsl", NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VS", "vs_5_0", 0, 0, &vsBlob, NULL); 
 	D3DCompileFromFile(L"shaders.hlsl", NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PS", "ps_5_0", 0, 0, &psBlob, NULL);
+	D3DCompileFromFile(L"compute.hlsl", NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "CSMain", "cs_5_0", 0, 0, &csBlob, NULL);
 
 	dev->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), NULL, &pVS);
 	dev->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), NULL, &pPS);
+	dev->CreateComputeShader(csBlob->GetBufferPointer(), csBlob->GetBufferSize(), NULL, &pCS);
 
 	devcon->VSSetShader(pVS, NULL, NULL);
 	devcon->PSSetShader(pPS, NULL, NULL);
+	devcon->CSSetShader(pCS, NULL, NULL);
 
     D3D11_INPUT_ELEMENT_DESC ied[] =
     {

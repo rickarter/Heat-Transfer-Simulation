@@ -29,5 +29,5 @@ float4 PS(VOut input) : SV_Target
     /*float4 pos = input.position;
     pos.xy /= 800;*/
     //computeData[0].color = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    return float4(0.0f, 0.0f, 0.0f, 1.0f);
+    return float4(0.0f, 1.0f, 1.0f, 1.0f);
 }
