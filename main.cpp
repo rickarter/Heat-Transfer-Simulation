@@ -2,6 +2,7 @@
 #include <d3d11.h>
 #include <D3Dcompiler.h>
 #include <DirectXmath.h>
+#include <stdio.h>
 
 using namespace DirectX;
 
@@ -10,7 +11,7 @@ using namespace DirectX;
 
 #define WINDOW_CLASS_NAME "ThermalConductivity"
 #define SCREEN_WIDTH 800
-#define SCRENN_HEIGHT 800
+#define SCREEN_HEIGHT 800
 
 IDXGISwapChain *swapchain;
 ID3D11Device *dev;
@@ -26,6 +27,7 @@ ID3D11ComputeShader *pCS;
 ID3D11Buffer *pVertexBuffer;
 ID3D11Buffer *pIndexBuffer;
 ID3D11Buffer *pComputeBuffer;
+ID3D11Buffer *pComputeResultBuffer;
 
 struct Vertex
 {
@@ -62,7 +64,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	wc.lpszClassName = TEXT(WINDOW_CLASS_NAME);
 	RegisterClassEx(&wc);
 	
-	RECT wr = {0, 0, SCREEN_WIDTH, SCRENN_HEIGHT};
+	RECT wr = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
 	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
 	hWnd = CreateWindowEx(
@@ -83,6 +85,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	ShowWindow(hWnd, SW_SHOW);
 
 	InitD3D(hWnd);
+	InitPipeline();
+	InitGraphics();
+
 	BOOL run = TRUE;
 	while (run)
 	{
@@ -116,6 +121,40 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 	return DefWindowProc (hWnd, message, wParam, lParam);
 }
 
+void RenderFrame()
+{
+	// Clear the backbuffer
+	float clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
+	devcon->ClearRenderTargetView(backbuffer, clearColor);
+
+	devcon->Dispatch(1, 1, 1);
+
+	devcon->CopyResource(pComputeResultBuffer, pComputeBuffer);
+
+	// Read data from Compute Shader
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	devcon->Map(pComputeResultBuffer, 0, D3D11_MAP_READ, 0, &mappedResource);
+
+	ComputeData *p;
+	p = (ComputeData*)mappedResource.pData;
+
+	float t = p[1].color.y;
+	char buffer[256] = {};
+	sprintf(buffer, "%f", t);
+	MessageBox(NULL, buffer, "Debug", NULL);
+
+
+	//assert(p[1].color.y < 10.0f);
+	//MessageBox(NULL, a, "Name", 0);
+	// assert(FALSE);
+
+	devcon->Unmap(pComputeResultBuffer, 0);
+
+	devcon->DrawIndexed(6, 0, 0);
+
+	swapchain->Present(0, 0);
+}
+
 void InitD3D(HWND hWnd)
 {
 	/*	Direct3D initialization	*/
@@ -126,7 +165,7 @@ void InitD3D(HWND hWnd)
 	scd.BufferCount = 1;
 	scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	scd.BufferDesc.Width = SCREEN_WIDTH;
-	scd.BufferDesc.Height = SCRENN_HEIGHT;
+	scd.BufferDesc.Height = SCREEN_HEIGHT;
 	scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	scd.OutputWindow = hWnd;
 	scd.SampleDesc.Count = 4;
@@ -167,48 +206,9 @@ void InitD3D(HWND hWnd)
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
 	viewport.Width = SCREEN_WIDTH;
-	viewport.Height = SCRENN_HEIGHT;
+	viewport.Height = SCREEN_HEIGHT;
 
 	devcon->RSSetViewports(1, &viewport);
-
-	InitPipeline();
-	InitGraphics();
-}
-
-void CleanD3D()
-{
-	swapchain->SetFullscreenState(FALSE, NULL);
-
-	// Close and release all existing COM objects
-	pVS->Release();
-	pPS->Release();
-	pCS->Release();
-
-	pLayout->Release();
-	pUAView->Release();
-
-	pVertexBuffer->Release();
-	pIndexBuffer->Release();
-	pComputeBuffer->Release();
-
-	swapchain->Release();
-	backbuffer->Release();
-
-	dev->Release();
-	devcon->Release();
-}
-
-void RenderFrame()
-{
-	// Clear the backbuffer
-	float clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
-	devcon->ClearRenderTargetView(backbuffer, clearColor);
-
-	devcon->Dispatch(1, 1, 1);
-
-	devcon->DrawIndexed(6, 0, 0);
-
-	swapchain->Present(0, 0);
 }
 
 void InitGraphics()
@@ -257,11 +257,14 @@ void InitGraphics()
 	devcon->IASetIndexBuffer(pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
 	// Compute shader buffer
-	ComputeData data[] = 
+	/* ComputeData data[] = 
 	{
-		XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),
-		XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f)
-	};
+		{ XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT4(0.0f, 0.6f, 0.0f, 1.0f) }
+	}; */
+
+	ComputeData data[SCREEN_WIDTH * SCREEN_HEIGHT];
+	ZeroMemory(&data, sizeof(data));
 
 	ZeroMemory(&bd, sizeof(bd)); // Clean bd (Decleared above)
 	bd.Usage = D3D11_USAGE_DEFAULT;
@@ -291,6 +294,13 @@ void InitGraphics()
 
 	devcon->CSSetUnorderedAccessViews(0, 1, &pUAView, NULL);
 
+	// Compute result buffer
+	bd.Usage = D3D11_USAGE_STAGING;
+	bd.BindFlags = 0;
+	bd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+
+	dev->CreateBuffer(&bd, 0, &pComputeResultBuffer);
+
 	// Set topology
 	devcon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
@@ -310,12 +320,35 @@ void InitPipeline()
 	devcon->PSSetShader(pPS, NULL, NULL);
 	devcon->CSSetShader(pCS, NULL, NULL);
 
-    D3D11_INPUT_ELEMENT_DESC ied[] =
-    {
+    D3D11_INPUT_ELEMENT_DESC ied[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
     dev->CreateInputLayout(ied, 2, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &pLayout);
     devcon->IASetInputLayout(pLayout);
+}
+
+void CleanD3D()
+{
+	swapchain->SetFullscreenState(FALSE, NULL);
+
+	// Close and release all existing COM objects
+	pVS->Release();
+	pPS->Release();
+	pCS->Release();
+
+	pLayout->Release();
+	pUAView->Release();
+
+	pVertexBuffer->Release();
+	pIndexBuffer->Release();
+	pComputeBuffer->Release();
+	pComputeResultBuffer->Release();
+
+	swapchain->Release();
+	backbuffer->Release();
+
+	dev->Release();
+	devcon->Release();
 }
