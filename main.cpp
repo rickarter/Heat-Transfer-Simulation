@@ -10,15 +10,17 @@ using namespace DirectX;
 #pragma comment (lib, "D3Dcompiler.lib")
 
 #define WINDOW_CLASS_NAME "ThermalConductivity"
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 800
+#define SCREEN_WIDTH 500
+#define SCREEN_HEIGHT 500
 
 IDXGISwapChain *swapchain;
 ID3D11Device *dev;
 ID3D11DeviceContext *devcon;
 ID3D11RenderTargetView *backbuffer;
 ID3D11InputLayout *pLayout;
+
 ID3D11UnorderedAccessView *pUAView;
+ID3D11ShaderResourceView *pSRView;
 
 ID3D11VertexShader *pVS;
 ID3D11PixelShader *pPS;
@@ -36,7 +38,7 @@ struct Vertex
 
 struct ComputeData 
 {
-	XMFLOAT4 color;
+	float energy;
 };
 
 void InitD3D(HWND hWnd);
@@ -135,23 +137,23 @@ void RenderFrame()
 	float clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
 	devcon->ClearRenderTargetView(backbuffer, clearColor);
 
-	devcon->Dispatch(1, 1, 1);
+	devcon->Dispatch(1, 500, 1);
 
 	devcon->CopyResource(pComputeResultBuffer, pComputeBuffer);
 
 	// Read data from Compute Shader
-	/* D3D11_MAPPED_SUBRESOURCE mappedResource;
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	devcon->Map(pComputeResultBuffer, 0, D3D11_MAP_READ, 0, &mappedResource);
 
 	ComputeData *p;
 	p = (ComputeData*)mappedResource.pData;
 
-	float t = p[2].color.y;
+	float t = p[2].energy;
 	char buffer[256] = {};
 	sprintf(buffer, "%f", t);
 	MessageBox(NULL, buffer, "Debug", NULL);
 
-	devcon->Unmap(pComputeResultBuffer, 0); */
+	devcon->Unmap(pComputeResultBuffer, 0);
 
 	devcon->DrawIndexed(6, 0, 0);
 
@@ -266,23 +268,31 @@ void InitGraphics()
 		{ XMFLOAT4(0.0f, 0.6f, 0.0f, 1.0f) }
 	};*/
 	
-	const unsigned int dataSize = 2;
+	/*const unsigned int dataSize = 2;
 	ComputeData data[dataSize];
 	ComputeData initData;
 	initData.color = XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f);
 	for(int i = 0; i < dataSize; i++)
 	{
 		data[i] = initData;
-	}
+	}*/
 
 	//ComputeData data[SCREEN_WIDTH * SCREEN_HEIGHT];
 	//ZeroMemory(&data, sizeof(data));
+	//
+	const size_t dataSize = SCREEN_WIDTH * SCREEN_HEIGHT;
+	ComputeData data[dataSize];
+	for(int i = 0; i < dataSize; i++)
+	{
+		data[i].energy = 0.0f;
+	}
+	data[0].energy = 100.0f;
 
 	ZeroMemory(&bd, sizeof(bd)); // Clean bd (Decleared above)
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(ComputeData) * dataSize;
 	bd.StructureByteStride = sizeof(ComputeData);
-	bd.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+	bd.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.CPUAccessFlags = 0;
 
@@ -293,6 +303,7 @@ void InitGraphics()
 
 	dev->CreateBuffer(&bd, &InitData, &pComputeBuffer);
 
+	// Set UAV for compute shader
 	D3D11_UNORDERED_ACCESS_VIEW_DESC uavd;
 	ZeroMemory(&uavd, sizeof(uavd));
 
@@ -312,6 +323,21 @@ void InitGraphics()
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 
 	dev->CreateBuffer(&bd, 0, &pComputeResultBuffer);
+
+	// Set SRV for Pixel Shader
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
+	ZeroMemory(&srvd, sizeof(srvd));
+
+	srvd.BufferEx.FirstElement = 0;
+	srvd.BufferEx.Flags = 0;
+	srvd.BufferEx.NumElements = dataSize; 
+	srvd.Format = DXGI_FORMAT_UNKNOWN;
+	srvd.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+
+	HRESULT hr = dev->CreateShaderResourceView(pComputeBuffer, &srvd, &pSRView);
+	assert(SUCCEEDED(hr));
+
+	devcon->PSSetShaderResources(0, 1, &pSRView);
 
 	// Set topology
 	devcon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -352,6 +378,7 @@ void CleanD3D()
 
 	pLayout->Release();
 	pUAView->Release();
+	pSRView->Release();
 
 	pVertexBuffer->Release();
 	pIndexBuffer->Release();

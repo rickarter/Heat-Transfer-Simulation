@@ -19,15 +19,16 @@ VOut VS(VIn input)
 
 struct ComputeData
 {
-    float4 color;
+    float energy;
 };
 
-RWStructuredBuffer<ComputeData> computeData : register(u0);
+StructuredBuffer<ComputeData> data : register(t0);
 
 float4 PS(VOut input) : SV_Target
 {
     /*float4 pos = input.position;
     pos.xy /= 800;*/
     //computeData[0].color = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    return float4(0.0f, 1.0f, 1.0f, 1.0f);
+    float energy = data[0].energy;
+    return float4(energy, energy, energy, energy);
 }

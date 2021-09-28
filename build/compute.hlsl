@@ -1,16 +1,27 @@
 struct ComputeData
 {
-    float t;
+    float energy;
 };
 
 RWStructuredBuffer<ComputeData> data : register(u0);
-[numthreads(1, 1, 1)]
-void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
+
+void TransferEnergy(uint id1, uint id2)
 {
-    // data[1].color.y = data[1].color.y / 2;
-    //data[1].color.y += 2.0f;
-    //
-    //data[1].color.y = 0.3f;
-    // data[1].color.y = 0 == 0;
-    //data[2].t = 12.f;
+    float dTemperature = data[id2].energy - data[id1].energy;
+    float dTime = 0.1f;
+    float Q = dTemperature * dTime;
+    data[id1].energy += Q;
+    data[id2].energy -= Q;
+}
+
+[numthreads(1, 1, 1)]
+void CSMain(uint3 groupID : SV_GroupID)
+{
+    //int multiplier = 1f;
+    for(int i = 0; i < 500-1; i++)
+    {
+        uint id = 500 * groupID.y + i;
+        TransferEnergy(id, id+1);
+    }
+    // data[groupID].energy += 20.0f;
 }
