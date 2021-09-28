@@ -101,7 +101,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				run = FALSE;
 		}
 
-		RenderFrame();
+		if (run)
+			RenderFrame();
 	}
 
 	CleanD3D();
@@ -115,6 +116,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
+			break;
+		case WM_KEYDOWN:
+			if (wParam == VK_ESCAPE)
+			{
+				PostQuitMessage(0);
+				return 0;
+			}
 			break;
 	}
 
@@ -132,23 +140,18 @@ void RenderFrame()
 	devcon->CopyResource(pComputeResultBuffer, pComputeBuffer);
 
 	// Read data from Compute Shader
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	/* D3D11_MAPPED_SUBRESOURCE mappedResource;
 	devcon->Map(pComputeResultBuffer, 0, D3D11_MAP_READ, 0, &mappedResource);
 
 	ComputeData *p;
 	p = (ComputeData*)mappedResource.pData;
 
-	float t = p[1].color.y;
+	float t = p[2].color.y;
 	char buffer[256] = {};
 	sprintf(buffer, "%f", t);
 	MessageBox(NULL, buffer, "Debug", NULL);
 
-
-	//assert(p[1].color.y < 10.0f);
-	//MessageBox(NULL, a, "Name", 0);
-	// assert(FALSE);
-
-	devcon->Unmap(pComputeResultBuffer, 0);
+	devcon->Unmap(pComputeResultBuffer, 0); */
 
 	devcon->DrawIndexed(6, 0, 0);
 
@@ -257,18 +260,27 @@ void InitGraphics()
 	devcon->IASetIndexBuffer(pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
 	// Compute shader buffer
-	/* ComputeData data[] = 
+	/*ComputeData data[] = 
 	{
 		{ XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
 		{ XMFLOAT4(0.0f, 0.6f, 0.0f, 1.0f) }
-	}; */
+	};*/
+	
+	const unsigned int dataSize = 2;
+	ComputeData data[dataSize];
+	ComputeData initData;
+	initData.color = XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f);
+	for(int i = 0; i < dataSize; i++)
+	{
+		data[i] = initData;
+	}
 
-	ComputeData data[SCREEN_WIDTH * SCREEN_HEIGHT];
-	ZeroMemory(&data, sizeof(data));
+	//ComputeData data[SCREEN_WIDTH * SCREEN_HEIGHT];
+	//ZeroMemory(&data, sizeof(data));
 
 	ZeroMemory(&bd, sizeof(bd)); // Clean bd (Decleared above)
 	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(ComputeData) * 2;
+	bd.ByteWidth = sizeof(ComputeData) * dataSize;
 	bd.StructureByteStride = sizeof(ComputeData);
 	bd.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -286,7 +298,7 @@ void InitGraphics()
 
 	uavd.Buffer.FirstElement = 0;
 	uavd.Buffer.Flags = 0;
-	uavd.Buffer.NumElements = 2;
+	uavd.Buffer.NumElements = dataSize;
 	uavd.Format = DXGI_FORMAT_UNKNOWN;
 	uavd.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 

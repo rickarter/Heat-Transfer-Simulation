@@ -1,4 +1,4 @@
 @echo off
 pushd build
-start main.exe
+main.exe
 popd
