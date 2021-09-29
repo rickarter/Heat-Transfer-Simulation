@@ -139,23 +139,24 @@ void RenderFrame()
 	devcon->PSSetShaderResources(0, 1, ppSRViewNULL);
 	devcon->CSSetUnorderedAccessViews(0, 1, &pUAView, NULL);
 
-	devcon->Dispatch(1, 500, 1);
+	devcon->Dispatch(1, 501, 1);
+	devcon->Dispatch(501, 1, 1);
 
 	devcon->CopyResource(pComputeResultBuffer, pComputeBuffer);
 
 	// Read data from Compute Shader
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
+		/* D3D11_MAPPED_SUBRESOURCE mappedResource;
 		devcon->Map(pComputeResultBuffer, 0, D3D11_MAP_READ, 0, &mappedResource);
 
 		ComputeData *p;
 		p = (ComputeData*)mappedResource.pData;
 
-		float t = p[2].energy;
+		float t = p[500].energy;
 		char buffer[256] = {};
 		sprintf(buffer, "%f", t);
 		MessageBox(NULL, buffer, "Debug", NULL);
 
-		devcon->Unmap(pComputeResultBuffer, 0);
+		devcon->Unmap(pComputeResultBuffer, 0); */
 
 	devcon->CSSetUnorderedAccessViews(0, 1, ppUAViewNULL, NULL);
 	devcon->PSSetShaderResources(0, 1, &pSRView);
@@ -272,7 +273,19 @@ void InitGraphics()
 	{
 		data[i].energy = 0.0f;
 	}
-	data[0 + 500 * 0].energy = 100.0f;
+	/*for(int i = 0; i < 500/2; i++)
+	{
+		if(((i + 500*250) % 2) == 0)
+		data[i + 500*250].energy = 100.0f;
+	}*/ 
+	//data[250 + SCREEN_WIDTH * 250].energy = 100000.0f;
+	data[250 + 500 * 250].energy = 100000.0f * 0.45f;
+	/*data[0].energy = 250000.0f;
+	data[499].energy = 250000.0f;
+	data[500*499].energy = 250000.0f;
+	data[499 + 500*499].energy = 250000.0f;*/
+
+	//data[0].energy = 1000.0f;
 
 	ZeroMemory(&bd, sizeof(bd)); // Clean bd (Decleared above)
 	bd.Usage = D3D11_USAGE_DEFAULT;

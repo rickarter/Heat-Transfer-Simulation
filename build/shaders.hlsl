@@ -27,6 +27,6 @@ StructuredBuffer<ComputeData> data : register(t0);
 float4 PS(VOut input) : SV_Target
 {
     float2 pos = input.position;
-    float energy = data[pos.x].energy;
-    return float4(energy / 100.0f, 0.0f, 0.0f, 0.0f);
+    float energy = data[pos.x-250 + 500 * pos.y].energy;
+    return float4(energy, 0.0f, 0.0f, 0.0f);
 }
