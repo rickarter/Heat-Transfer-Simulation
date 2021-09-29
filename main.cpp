@@ -133,27 +133,32 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 
 void RenderFrame()
 {
-	// Clear the backbuffer
-	float clearColor[4] = { 0.0f, 0.2f, 0.4f, 1.0f };
-	devcon->ClearRenderTargetView(backbuffer, clearColor);
+	ID3D11UnorderedAccessView* ppUAViewNULL[1] = { NULL };
+	ID3D11ShaderResourceView* ppSRViewNULL[1] = { NULL };
+
+	devcon->PSSetShaderResources(0, 1, ppSRViewNULL);
+	devcon->CSSetUnorderedAccessViews(0, 1, &pUAView, NULL);
 
 	devcon->Dispatch(1, 500, 1);
 
 	devcon->CopyResource(pComputeResultBuffer, pComputeBuffer);
 
 	// Read data from Compute Shader
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	devcon->Map(pComputeResultBuffer, 0, D3D11_MAP_READ, 0, &mappedResource);
+		D3D11_MAPPED_SUBRESOURCE mappedResource;
+		devcon->Map(pComputeResultBuffer, 0, D3D11_MAP_READ, 0, &mappedResource);
 
-	ComputeData *p;
-	p = (ComputeData*)mappedResource.pData;
+		ComputeData *p;
+		p = (ComputeData*)mappedResource.pData;
 
-	float t = p[2].energy;
-	char buffer[256] = {};
-	sprintf(buffer, "%f", t);
-	MessageBox(NULL, buffer, "Debug", NULL);
+		float t = p[2].energy;
+		char buffer[256] = {};
+		sprintf(buffer, "%f", t);
+		MessageBox(NULL, buffer, "Debug", NULL);
 
-	devcon->Unmap(pComputeResultBuffer, 0);
+		devcon->Unmap(pComputeResultBuffer, 0);
+
+	devcon->CSSetUnorderedAccessViews(0, 1, ppUAViewNULL, NULL);
+	devcon->PSSetShaderResources(0, 1, &pSRView);
 
 	devcon->DrawIndexed(6, 0, 0);
 
@@ -261,32 +266,13 @@ void InitGraphics()
 
 	devcon->IASetIndexBuffer(pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
-	// Compute shader buffer
-	/*ComputeData data[] = 
-	{
-		{ XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
-		{ XMFLOAT4(0.0f, 0.6f, 0.0f, 1.0f) }
-	};*/
-	
-	/*const unsigned int dataSize = 2;
-	ComputeData data[dataSize];
-	ComputeData initData;
-	initData.color = XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f);
-	for(int i = 0; i < dataSize; i++)
-	{
-		data[i] = initData;
-	}*/
-
-	//ComputeData data[SCREEN_WIDTH * SCREEN_HEIGHT];
-	//ZeroMemory(&data, sizeof(data));
-	//
 	const size_t dataSize = SCREEN_WIDTH * SCREEN_HEIGHT;
 	ComputeData data[dataSize];
 	for(int i = 0; i < dataSize; i++)
 	{
 		data[i].energy = 0.0f;
 	}
-	data[0].energy = 100.0f;
+	data[0 + 500 * 0].energy = 100.0f;
 
 	ZeroMemory(&bd, sizeof(bd)); // Clean bd (Decleared above)
 	bd.Usage = D3D11_USAGE_DEFAULT;
@@ -315,7 +301,7 @@ void InitGraphics()
 
 	dev->CreateUnorderedAccessView(pComputeBuffer, &uavd, &pUAView);
 
-	devcon->CSSetUnorderedAccessViews(0, 1, &pUAView, NULL);
+	// devcon->CSSetUnorderedAccessViews(0, 1, &pUAView, NULL);
 
 	// Compute result buffer
 	bd.Usage = D3D11_USAGE_STAGING;
@@ -336,8 +322,6 @@ void InitGraphics()
 
 	HRESULT hr = dev->CreateShaderResourceView(pComputeBuffer, &srvd, &pSRView);
 	assert(SUCCEEDED(hr));
-
-	devcon->PSSetShaderResources(0, 1, &pSRView);
 
 	// Set topology
 	devcon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
