@@ -8,7 +8,7 @@ RWStructuredBuffer<ComputeData> data : register(u0);
 void TransferEnergy(uint id1, uint id2)
 {
     float dTemperature = data[id2].energy - data[id1].energy;
-    float dTime = 0.1f;//0.1f;
+    float dTime = .6f;//0.1f;
     float Q = dTemperature * dTime;
     data[id1].energy += Q;
     data[id2].energy -= Q;

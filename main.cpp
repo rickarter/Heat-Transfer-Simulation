@@ -9,7 +9,7 @@ using namespace DirectX;
 #pragma comment (lib, "d3d11.lib")
 #pragma comment (lib, "D3Dcompiler.lib")
 
-#define WINDOW_CLASS_NAME "ThermalConductivity"
+#define WINDOW_CLASS_NAME "Heat Transfer"
 #define SCREEN_WIDTH 500
 #define SCREEN_HEIGHT 500
 
@@ -89,6 +89,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitD3D(hWnd);
 	InitPipeline();
 	InitGraphics();
+
+	//Sleep(1000);
 
 	BOOL run = TRUE;
 	while (run)
@@ -273,19 +275,19 @@ void InitGraphics()
 	{
 		data[i].energy = 0.0f;
 	}
-	/*for(int i = 0; i < 500/2; i++)
+	for(int i = 0; i < 500; i++)
 	{
-		if(((i + 500*250) % 2) == 0)
-		data[i + 500*250].energy = 100.0f;
-	}*/ 
-	//data[250 + SCREEN_WIDTH * 250].energy = 100000.0f;
-	data[250 + 500 * 250].energy = 100000.0f * 0.45f;
-	/*data[0].energy = 250000.0f;
-	data[499].energy = 250000.0f;
-	data[500*499].energy = 250000.0f;
-	data[499 + 500*499].energy = 250000.0f;*/
-
-	//data[0].energy = 1000.0f;
+		//if(((i + 500*250) % 2) == 0)
+		//data[0 + 500 * i].energy = 10000.0f;
+		//data[499 + 500 * i].energy = -20000.f;
+	} 
+	//data[250 + 500 * 250].energy = 100000.0f * 2.0f;
+	data[0].energy = -850550.0f;
+	data[499].energy = -2000050.0f;
+	data[500*499].energy = -5500000.0f;
+	data[500*499 + 499].energy = -20009000.0f;
+	data[499 + 250 * 500].energy = -350000.0f;
+	data[250 + 250 * 500].energy = -20000000.0f;
 
 	ZeroMemory(&bd, sizeof(bd)); // Clean bd (Decleared above)
 	bd.Usage = D3D11_USAGE_DEFAULT;
