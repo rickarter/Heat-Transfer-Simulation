@@ -1,2 +1,2 @@
-# ThermalConductivitySimulation
- A simplified simulation of thermal conductivity
+# Heat Transfer Simulation
+ A simple simulation of heat transfer
